@@ -6168,6 +6168,8 @@ namespace SS.Matchmaking.Modules
 
                 MatchStartedCallback.Fire(_broker, matchData);
                 TeamVersusMatchStartedCallback.Fire(matchData.Arena!, matchData);
+
+                CheckForMatchCompletion(matchData);
             }
 
             void ProcessInProgress(MatchData matchData)
