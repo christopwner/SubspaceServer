@@ -552,6 +552,11 @@ namespace SS.Core.Modules
 
         void IArenaManager.AddHold(Arena arena)
         {
+            AddHold(arena);
+        }
+
+        private void AddHold(Arena arena)
+        {
             WriteLock();
             try
             {
@@ -578,6 +583,11 @@ namespace SS.Core.Modules
         }
 
         void IArenaManager.RemoveHold(Arena arena)
+        {
+            RemoveHold(arena);
+        }
+
+        private void RemoveHold(Arena arena)
         {
             WriteLock();
             try
@@ -1167,8 +1177,16 @@ namespace SS.Core.Modules
             }
 
             Debug.Assert(arenaData.Holds == 0);
-            ArenaActionCallback.Fire(arena, arena, ArenaAction.PreCreate);
-            UpdateArenaHoldState(arena, arenaData);
+
+            AddHold(arena);
+            try
+            {
+                ArenaActionCallback.Fire(arena, arena, ArenaAction.PreCreate);
+            }
+            finally
+            {
+                RemoveHold(arena);
+            }
         }
 
         private async void ArenaStateChange_DoInit1(Arena arena, ArenaState state)
@@ -1189,8 +1207,16 @@ namespace SS.Core.Modules
             }
 
             Debug.Assert(arenaData.Holds == 0);
-            ArenaActionCallback.Fire(arena, arena, ArenaAction.Create);
-            UpdateArenaHoldState(arena, arenaData);
+
+            AddHold(arena);
+            try
+            {
+                ArenaActionCallback.Fire(arena, arena, ArenaAction.Create);
+            }
+            finally
+            {
+                RemoveHold(arena);
+            }
 
             [ConfigHelp("Modules", "AttachModules", ConfigScope.Arena,
             Description = """
@@ -1322,8 +1348,16 @@ namespace SS.Core.Modules
             }
 
             Debug.Assert(arenaData.Holds == 0);
-            ArenaActionCallback.Fire(arena, arena, ArenaAction.Destroy);
-            UpdateArenaHoldState(arena, arenaData);
+
+            AddHold(arena);
+            try
+            {
+                ArenaActionCallback.Fire(arena, arena, ArenaAction.Destroy);
+            }
+            finally
+            {
+                RemoveHold(arena);
+            }
         }
 
         private async void ArenaStateChange_DoDestroy2(Arena arena, ArenaState state)
