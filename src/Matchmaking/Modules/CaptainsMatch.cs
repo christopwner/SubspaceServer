@@ -225,7 +225,7 @@ namespace SS.Matchmaking.Modules
             ArenaData arenaData = _arenaDataPool.Get();
             arenaData.Arena = arena;
             // TimeLimit
-            TimeSpan? timeLimit = null;
+            TimeSpan timeLimit = TimeSpan.Zero;
             string? timeLimitStr = _configManager.GetStr(ch, "CaptainsMatch", "TimeLimit");
             if (!string.IsNullOrWhiteSpace(timeLimitStr))
             {
@@ -237,7 +237,7 @@ namespace SS.Matchmaking.Modules
 
             // OverTimeLimit (only meaningful when TimeLimit is set)
             TimeSpan? overTimeLimit = null;
-            if (timeLimit is not null)
+            if (timeLimit != TimeSpan.Zero)
             {
                 string? otlStr = _configManager.GetStr(ch, "CaptainsMatch", "OverTimeLimit");
                 if (!string.IsNullOrWhiteSpace(otlStr))
@@ -2408,9 +2408,17 @@ namespace SS.Matchmaking.Modules
             if (!match.IsOvertime && arenaData.Config.OverTimeLimit is { } otl)
             {
                 match.IsOvertime = true;
-                int otlMs = (int)otl.TotalMilliseconds;
-                _mainloopTimer.SetTimer<ActiveMatch>(Timer_MatchTimeExpired, otlMs, Timeout.Infinite, match, match);
-                _chat.SendArenaMessage(arena, $"Overtime! Score is {match.Freq1}:{team1Score} - {match.Freq2}:{team2Score}. {(int)otl.TotalMinutes}m remaining.");
+
+                if (arenaData.Config.OverTimeLimit == TimeSpan.Zero)
+                {
+                    _chat.SendArenaMessage(arena, $"Overtime! Score is {match.Freq1}:{team1Score} - {match.Freq2}:{team2Score}. No time limit.");
+                }
+                else
+                {
+                    int otlMs = (int)otl.TotalMilliseconds;
+                    _mainloopTimer.SetTimer<ActiveMatch>(Timer_MatchTimeExpired, otlMs, Timeout.Infinite, match, match);
+                    _chat.SendArenaMessage(arena, $"Overtime! Score is {match.Freq1}:{team1Score} - {match.Freq2}:{team2Score}. {(int)otl.TotalMinutes}m remaining.");
+                }
             }
             else
             {
@@ -2885,8 +2893,8 @@ namespace SS.Matchmaking.Modules
                 }
             }
 
-            string timeMsg = arenaData.Config.TimeLimit is { } tl
-                ? $" Time limit: {(int)tl.TotalMinutes}m."
+            string timeMsg = arenaData.Config.TimeLimit != TimeSpan.Zero
+                ? $" Time limit: {(int)arenaData.Config.TimeLimit.TotalMinutes}m."
                 : string.Empty;
             int lives = arenaData.Config.LivesPerPlayer;
             SendToMatchAudience(arena, arenaData, countdown.ActiveMatch,
@@ -3030,8 +3038,8 @@ namespace SS.Matchmaking.Modules
                 }
             }
 
-            if (arenaData.Config.TimeLimit is { } tl)
-                _mainloopTimer.SetTimer<ActiveMatch>(Timer_MatchTimeExpired, (int)tl.TotalMilliseconds, Timeout.Infinite, match, match);
+            if (arenaData.Config.TimeLimit != TimeSpan.Zero)
+                _mainloopTimer.SetTimer<ActiveMatch>(Timer_MatchTimeExpired, (int)arenaData.Config.TimeLimit.TotalMilliseconds, Timeout.Infinite, match, match);
         }
 
         private void EndMatch(Arena arena, ArenaData arenaData, ActiveMatch match, short losingFreq)
@@ -3500,7 +3508,7 @@ namespace SS.Matchmaking.Modules
             public required ShipType DefaultShip;
             public required List<(short F1, short F2)> FreqPairs;
             public required TimeSpan KickCooldown;
-            public required TimeSpan? TimeLimit;
+            public required TimeSpan TimeLimit;
             public required TimeSpan? OverTimeLimit;
             public required TimeSpan WinConditionDelay;
             public required int TimeLimitWinBy;
@@ -3704,7 +3712,7 @@ namespace SS.Matchmaking.Modules
             public int NumTeams => 2;
             public int PlayersPerTeam => _config.PlayersPerTeam;
             public int LivesPerPlayer => _config.LivesPerPlayer;
-            public TimeSpan? TimeLimit => _config.TimeLimit;
+            public TimeSpan TimeLimit => _config.TimeLimit;
             public TimeSpan? OverTimeLimit => _config.OverTimeLimit;
             public TimeSpan WinConditionDelay => _config.WinConditionDelay;
             public int TimeLimitWinBy => _config.TimeLimitWinBy;

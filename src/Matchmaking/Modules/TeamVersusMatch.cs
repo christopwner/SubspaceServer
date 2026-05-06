@@ -4197,7 +4197,7 @@ namespace SS.Matchmaking.Modules
             if (startCountdownDuration < TimeSpan.Zero)
                 startCountdownDuration = TimeSpan.Zero;
 
-            TimeSpan? timeLimit = null;
+            TimeSpan timeLimit = TimeSpan.Zero;
             string? timeLimitStr = _configManager.GetStr(ch, matchType, "TimeLimit");
             if (!string.IsNullOrWhiteSpace(timeLimitStr))
             {
@@ -4208,12 +4208,12 @@ namespace SS.Matchmaking.Modules
                 }
                 else
                 {
-                    timeLimit = limit;
+                    timeLimit = limit.Duration();
                 }
             }
 
             TimeSpan? overTimeLimit = null;
-            if (timeLimit is not null)
+            if (timeLimit != TimeSpan.Zero)
             {
                 string? overTimeLimitStr = _configManager.GetStr(ch, matchType, "OverTimeLimit");
                 if (!string.IsNullOrWhiteSpace(overTimeLimitStr))
@@ -4225,7 +4225,7 @@ namespace SS.Matchmaking.Modules
                     }
                     else
                     {
-                        overTimeLimit = limit;
+                        overTimeLimit = limit.Duration();
                     }
                 }
             }
@@ -5924,10 +5924,10 @@ namespace SS.Matchmaking.Modules
 
                             sb.Append($"  --  Time Limit: ");
 
-                            if (matchData.Configuration.TimeLimit is null)
+                            if (matchData.Configuration.TimeLimit == TimeSpan.Zero)
                                 sb.Append("None");
                             else
-                                sb.AppendFriendlyTimeSpan(matchData.Configuration.TimeLimit.Value);
+                                sb.AppendFriendlyTimeSpan(matchData.Configuration.TimeLimit);
 
                             sb.Append($"  --  {matchData.Configuration.LivesPerPlayer} lives per slot.");
 
@@ -6122,9 +6122,9 @@ namespace SS.Matchmaking.Modules
                 matchData.Status = MatchStatus.InProgress;
                 matchData.Started = DateTime.UtcNow;
 
-                if (matchData.Configuration.TimeLimit is not null)
+                if (matchData.Configuration.TimeLimit != TimeSpan.Zero)
                 {
-                    matchData.PhaseExpiration = matchData.Started + matchData.Configuration.TimeLimit.Value;
+                    matchData.PhaseExpiration = matchData.Started + matchData.Configuration.TimeLimit;
                 }
                 else
                 {
@@ -6194,7 +6194,11 @@ namespace SS.Matchmaking.Modules
                     if (!matchData.IsOvertime && matchData.Configuration.OverTimeLimit is not null)
                     {
                         matchData.IsOvertime = true;
-                        matchData.PhaseExpiration += matchData.Configuration.OverTimeLimit.Value;
+
+                        if (matchData.Configuration.OverTimeLimit.Value == TimeSpan.Zero)
+                            matchData.PhaseExpiration = null; // no overtime limit
+                        else
+                            matchData.PhaseExpiration += matchData.Configuration.OverTimeLimit.Value;
 
                         // Notify about overtime starting
                         HashSet<Player> players = _objectPoolManager.PlayerSetPool.Get();
@@ -6203,8 +6207,15 @@ namespace SS.Matchmaking.Modules
                         {
                             GetPlayersToNotify(matchData, players);
 
-                            sb.Append($"Overtime starting -- Time limit: ");
-                            sb.AppendFriendlyTimeSpan(matchData.Configuration.OverTimeLimit.Value);
+                            if (matchData.Configuration.OverTimeLimit.Value == TimeSpan.Zero)
+                            {
+                                sb.Append("Overtime starting -- Time limit: None");
+                            }
+                            else
+                            {
+                                sb.Append($"Overtime starting -- Time limit: ");
+                                sb.AppendFriendlyTimeSpan(matchData.Configuration.OverTimeLimit.Value);
+                            }
 
                             _chat.SendSetMessage(players, sb);
                         }
@@ -6925,7 +6936,7 @@ namespace SS.Matchmaking.Modules
             public required TimeSpan ArrivalWaitDuration { get; init; }
             public required TimeSpan ReadyWaitDuration { get; init; }
             public required TimeSpan StartCountdownDuration { get; init; }
-            public required TimeSpan? TimeLimit { get; init; }
+            public required TimeSpan TimeLimit { get; init; }
             public required TimeSpan? OverTimeLimit { get; init; }
             public required TimeSpan WinConditionDelay { get; init; }
             public required TimeSpan InactiveTeamsMatchCompletionDelay { get; init; }

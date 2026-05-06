@@ -32,15 +32,17 @@ namespace SS.Matchmaking.TeamVersus
         /// The duration of the match.
         /// </summary>
         /// <remarks>
-        /// <see langword="null"/> means no limit.
+        /// <see cref="TimeSpan.Zero"/> means no limit.
         /// </remarks>
-        TimeSpan? TimeLimit { get; }
+        TimeSpan TimeLimit { get; }
 
         /// <summary>
         /// The duration of overtime.
         /// </summary>
         /// <remarks>
-        /// <see langword="null"/> means no limit.
+        /// Overtime is only applicable when there is a <see cref="TimeLimit"/>.
+        /// <see langword="null"/> means no overtime.
+        /// <see cref="TimeSpan.Zero"/> means no limit.
         /// </remarks>
         TimeSpan? OverTimeLimit { get; }
 

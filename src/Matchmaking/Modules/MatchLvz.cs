@@ -939,13 +939,26 @@ namespace SS.Matchmaking.Modules
                 if (toggles.Length < Scoreboard_Timer_MaxToggles)
                     throw new ArgumentException(ExceptionMessage_InsufficientToggleBufferLength, nameof(toggles));
 
-                if (matchData.Started is null || matchData.Configuration.TimeLimit is null)
+                if (matchData.Started is null || matchData.Configuration.TimeLimit == TimeSpan.Zero)
+                {
+                    // Hide the scoreboard timer when there is no time limit.
+                    ClearScoreboardTimer(ref toggles, ref togglesWritten);
                     return;
+                }
 
                 DateTime now = DateTime.UtcNow;
-                TimeSpan remaining = (matchData.Started.Value + matchData.Configuration.TimeLimit.Value) - now;
+                TimeSpan remaining = (matchData.Started.Value + matchData.Configuration.TimeLimit) - now;
                 if (remaining < TimeSpan.Zero && matchData.Configuration.OverTimeLimit is not null)
-                    remaining = (matchData.Started.Value + matchData.Configuration.TimeLimit.Value + matchData.Configuration.OverTimeLimit.Value) - now;
+                {
+                    if (matchData.Configuration.OverTimeLimit == TimeSpan.Zero)
+                    {
+                        // Hide the scoreboard timer when there is no overtime limit.
+                        ClearScoreboardTimer(ref toggles, ref togglesWritten);
+                        return;
+                    }
+
+                    remaining = (matchData.Started.Value + matchData.Configuration.TimeLimit + matchData.Configuration.OverTimeLimit.Value) - now;
+                }
 
                 if (remaining < TimeSpan.Zero)
                     remaining = TimeSpan.Zero;
@@ -1060,7 +1073,7 @@ namespace SS.Matchmaking.Modules
                 void RefreshScoreboardForKill(IPlayerSlot killedSlot, ref Span<LvzObjectToggle> toggles, ref int togglesWritten)
                 {
                     if (toggles.Length < Scoreboard_Score_MaxToggles)
-                        throw new ArgumentException(ExceptionMessage_InsufficientChangeBufferLength, nameof(toggles));
+                        throw new ArgumentException(ExceptionMessage_InsufficientToggleBufferLength, nameof(toggles));
 
                     IMatchData matchData = killedSlot.MatchData;
 
@@ -1083,7 +1096,7 @@ namespace SS.Matchmaking.Modules
                         throw new ArgumentException(ExceptionMessage_InsufficientChangeBufferLength, nameof(changes));
 
                     if (toggles.Length < StatBox_RefreshForKill_MaxToggles)
-                        throw new ArgumentException(ExceptionMessage_InsufficientChangeBufferLength, nameof(toggles));
+                        throw new ArgumentException(ExceptionMessage_InsufficientToggleBufferLength, nameof(toggles));
 
                     IMatchData matchData = killedSlot.MatchData;
                     if (_matchData != matchData)
@@ -1170,7 +1183,7 @@ namespace SS.Matchmaking.Modules
                     throw new ArgumentException(ExceptionMessage_InsufficientChangeBufferLength, nameof(changes));
 
                 if (toggles.Length < Clear_MaxToggles)
-                    throw new ArgumentException(ExceptionMessage_InsufficientChangeBufferLength, nameof(toggles));
+                    throw new ArgumentException(ExceptionMessage_InsufficientToggleBufferLength, nameof(toggles));
 
                 _matchData = null;
 
@@ -1183,37 +1196,7 @@ namespace SS.Matchmaking.Modules
                 _scoreboard = null;
 
                 // scoreboard timer
-                if (_timerState.MinutesTens is not null)
-                {
-                    toggles[0] = new LvzObjectToggle(_timerState.MinutesTens.Value, false);
-                    toggles = toggles[1..];
-                    togglesWritten++;
-                    _timerState.MinutesTens = null;
-                }
-
-                if (_timerState.MinutesOnes is not null)
-                {
-                    toggles[0] = new LvzObjectToggle(_timerState.MinutesOnes.Value, false);
-                    toggles = toggles[1..];
-                    togglesWritten++;
-                    _timerState.MinutesOnes = null;
-                }
-
-                if (_timerState.SecondsTens is not null)
-                {
-                    toggles[0] = new LvzObjectToggle(_timerState.SecondsTens.Value, false);
-                    toggles = toggles[1..];
-                    togglesWritten++;
-                    _timerState.SecondsTens = null;
-                }
-
-                if (_timerState.SecondsOnes is not null)
-                {
-                    toggles[0] = new LvzObjectToggle(_timerState.SecondsOnes.Value, false);
-                    toggles = toggles[1..];
-                    togglesWritten++;
-                    _timerState.SecondsOnes = null;
-                }
+                ClearScoreboardTimer(ref toggles, ref togglesWritten);
 
                 // scoreboard freqs
                 for (int i = 0; i < _freqStates.Length; i++)
@@ -1320,6 +1303,41 @@ namespace SS.Matchmaking.Modules
                     }
 
                     _strikethoughEnabledObjects.Clear();
+                }
+            }
+
+            private void ClearScoreboardTimer(ref Span<LvzObjectToggle> toggles, ref int togglesWritten)
+            {
+                if (_timerState.MinutesTens is not null)
+                {
+                    toggles[0] = new LvzObjectToggle(_timerState.MinutesTens.Value, false);
+                    toggles = toggles[1..];
+                    togglesWritten++;
+                    _timerState.MinutesTens = null;
+                }
+
+                if (_timerState.MinutesOnes is not null)
+                {
+                    toggles[0] = new LvzObjectToggle(_timerState.MinutesOnes.Value, false);
+                    toggles = toggles[1..];
+                    togglesWritten++;
+                    _timerState.MinutesOnes = null;
+                }
+
+                if (_timerState.SecondsTens is not null)
+                {
+                    toggles[0] = new LvzObjectToggle(_timerState.SecondsTens.Value, false);
+                    toggles = toggles[1..];
+                    togglesWritten++;
+                    _timerState.SecondsTens = null;
+                }
+
+                if (_timerState.SecondsOnes is not null)
+                {
+                    toggles[0] = new LvzObjectToggle(_timerState.SecondsOnes.Value, false);
+                    toggles = toggles[1..];
+                    togglesWritten++;
+                    _timerState.SecondsOnes = null;
                 }
             }
 
